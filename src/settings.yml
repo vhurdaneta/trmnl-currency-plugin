@@ -5,9 +5,6 @@
 #
 ---
 strategy: polling
-refresh_interval: 300
+refresh_interval: 900
 polling_verb: get
-polling_url: http://host.docker.internal:8000/summary.json
-refresh_interval: 300
-
-#http://host.docker.internal:8000/data.json
+polling_url: https://raw.githubusercontent.com/vhurdaneta/trmnl-currency-plugin/master/data/output.json
