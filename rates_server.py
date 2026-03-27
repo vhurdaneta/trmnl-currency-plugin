@@ -16,50 +16,34 @@ logging.basicConfig(level=logging.INFO)
 BCV_URL = "https://www.bcv.org.ve"
 BINANCE_P2P_URL = "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search"
 
-# cada cuánto guardamos una muestra Binance (para no llenar el disco ni “spamear”)
+# Cada cuánto guardamos una muestra Binance (para no llenar el disco)
 SAMPLE_INTERVAL_SECONDS = 300  # 5 minutos
+
+# Hora a partir de la cual el BCV publica la tasa del día SIGUIENTE (hora Venezuela = UTC-4)
+# Ejemplo: a las 17:30 VET publican la tasa del próximo día hábil
+BCV_CUTOFF_HOUR = 17  # 5:00 PM hora Venezuela
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
-HISTORY_CSV = os.path.join(DATA_DIR, "rates_history.csv")          # 1 fila por día (promedios)
-SAMPLES_CSV = os.path.join(DATA_DIR, "binance_samples.csv")        # muchas filas por día (muestras)
+HISTORY_CSV = os.path.join(DATA_DIR, "rates_history.csv")   # 1 fila por día
+SAMPLES_CSV = os.path.join(DATA_DIR, "binance_samples.csv") # muestras intradía
 
 CACHE = {"data": None, "updated_at": None, "error": None}
 
+
+# ---------------------------------------------------------------------------
+# Helpers de formato
+# ---------------------------------------------------------------------------
 
 def _to_float_ves(s: str) -> float:
     s = s.strip().replace(".", "").replace(",", ".")
     return float(s)
 
 
-def ensure_storage():
-    os.makedirs(DATA_DIR, exist_ok=True)
-
-    if not os.path.exists(HISTORY_CSV):
-        with open(HISTORY_CSV, "w", newline="", encoding="utf-8") as f:
-            w = csv.writer(f)
-            # 1 fila por día (promedios diarios)
-            w.writerow([
-                "date",
-                "bcv_usd_ves",
-                "bcv_eur_ves",
-                "usdt_buy_avg",
-                "usdt_sell_avg",
-                "samples_count",
-                "first_sample_at",
-                "last_sample_at",
-            ])
-
-    if not os.path.exists(SAMPLES_CSV):
-        with open(SAMPLES_CSV, "w", newline="", encoding="utf-8") as f:
-            w = csv.writer(f)
-            # muestras intradía
-            w.writerow(["ts", "date", "usdt_buy_median", "usdt_sell_median"])
-
 def normalize_date_str(s: str) -> str:
+    """Convierte '10/3/2026' (día/mes/año) a '2026-03-10'."""
     s = (s or "").strip()
-    # Convierte "10/3/2026" (día/mes/año) a "2026-03-10"
     if "/" in s:
         parts = s.split("/")
         if len(parts) == 3:
@@ -71,7 +55,7 @@ def normalize_date_str(s: str) -> str:
 
 
 def dedupe_and_sort_history(rows: list) -> list:
-    # elimina duplicados por date quedándose con el último
+    """Elimina duplicados por date quedándose con el último, y ordena."""
     dedup = {}
     for r in rows:
         key = r.get("date")
@@ -82,9 +66,92 @@ def dedupe_and_sort_history(rows: list) -> list:
     return out
 
 
+# ---------------------------------------------------------------------------
+# Lógica clave: ¿a qué fecha corresponde la tasa del BCV ahora?
+# ---------------------------------------------------------------------------
+
+def bcv_effective_date(now: dt.datetime) -> str:
+    """
+    El BCV publica la tasa del DÍA HÁBIL SIGUIENTE a partir de las 5-6 PM
+    del día hábil anterior.
+
+    Regla implementada:
+    - Si son las BCV_CUTOFF_HOUR o más (hora local Venezuela), la tasa
+      publicada corresponde al PRÓXIMO día hábil → avanzamos la fecha.
+    - Si es antes del corte, la tasa corresponde al día actual o al
+      último día hábil pasado.
+    - Siempre saltamos fines de semana: sábado → lunes, domingo → lunes.
+
+    Retorna: string ISO 'YYYY-MM-DD' con la fecha efectiva de la tasa.
+    """
+    date = now.date()
+
+    if now.hour >= BCV_CUTOFF_HOUR:
+        # La tasa ya es del próximo día hábil
+        date += dt.timedelta(days=1)
+        # Saltar fines de semana
+        while date.weekday() >= 5:  # 5=sábado, 6=domingo
+            date += dt.timedelta(days=1)
+    else:
+        # Tasa del día actual; si es fin de semana, corresponde al lunes
+        while date.weekday() >= 5:
+            date += dt.timedelta(days=1)
+
+    return date.isoformat()
+
+
+def bcv_date_label(effective_date_str: str, now: dt.datetime) -> str:
+    """
+    Devuelve una etiqueta legible que indica si la tasa es de hoy,
+    mañana, o el lunes (cuando es fin de semana).
+    Útil para mostrar en la UI del plugin.
+    """
+    today = now.date().isoformat()
+    tomorrow = (now.date() + dt.timedelta(days=1)).isoformat()
+
+    if effective_date_str == today:
+        return "hoy"
+    elif effective_date_str == tomorrow:
+        return "mañana"
+    else:
+        return f"próx. hábil ({effective_date_str})"
+
+
+# ---------------------------------------------------------------------------
+# Almacenamiento
+# ---------------------------------------------------------------------------
+
+def ensure_storage():
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+    if not os.path.exists(HISTORY_CSV):
+        with open(HISTORY_CSV, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow([
+                "date",           # fecha efectiva de la tasa BCV (YYYY-MM-DD)
+                "bcv_usd_ves",
+                "bcv_eur_ves",
+                "bcv_locked",     # '1' si ya se fijó la tasa del día (no se sobreescribe)
+                "usdt_buy_avg",
+                "usdt_sell_avg",
+                "samples_count",
+                "first_sample_at",
+                "last_sample_at",
+            ])
+
+    if not os.path.exists(SAMPLES_CSV):
+        with open(SAMPLES_CSV, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["ts", "date", "usdt_buy_median", "usdt_sell_median"])
+
+
+# ---------------------------------------------------------------------------
+# Fuentes de datos externas
+# ---------------------------------------------------------------------------
 
 def fetch_bcv_rate(currency_id: str, timeout=15) -> dict:
-    r = requests.get(BCV_URL, timeout=timeout, verify=False, headers={"User-Agent": "Mozilla/5.0"})
+    r = requests.get(BCV_URL, timeout=timeout, verify=False,
+                     headers={"User-Agent": "Mozilla/5.0"})
     r.raise_for_status()
 
     soup = BeautifulSoup(r.text, "html.parser")
@@ -136,7 +203,9 @@ def fetch_binance_ads_first_100(
         j = r.json()
 
         if j.get("code") != "000000":
-            raise RuntimeError(f"Binance P2P respondió code={j.get('code')} message={j.get('message')}")
+            raise RuntimeError(
+                f"Binance P2P respondió code={j.get('code')} message={j.get('message')}"
+            )
 
         data = j.get("data", [])
         if not isinstance(data, list) or len(data) == 0:
@@ -144,13 +213,11 @@ def fetch_binance_ads_first_100(
 
         for item in data:
             adv = item.get("adv", {}) or {}
-            ads.append(
-                {
-                    "price": float(adv.get("price", 0) or 0),
-                    "min": float(adv.get("minSingleTransAmount", 0) or 0),
-                    "max": float(adv.get("maxSingleTransAmount", 0) or 0),
-                }
-            )
+            ads.append({
+                "price": float(adv.get("price", 0) or 0),
+                "min": float(adv.get("minSingleTransAmount", 0) or 0),
+                "max": float(adv.get("maxSingleTransAmount", 0) or 0),
+            })
             if len(ads) >= limit:
                 break
 
@@ -174,6 +241,10 @@ def fetch_binance_ads_first_100(
         "source": BINANCE_P2P_URL,
     }
 
+
+# ---------------------------------------------------------------------------
+# Muestras intradía Binance
+# ---------------------------------------------------------------------------
 
 def read_last_sample_ts():
     if not os.path.exists(SAMPLES_CSV):
@@ -202,13 +273,16 @@ def record_sample_if_due(now: dt.datetime, buy_median: float, sell_median: float
 
     with open(SAMPLES_CSV, "a", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow([now.isoformat(timespec="seconds"), now.date().isoformat(), buy_median, sell_median])
+        w.writerow([
+            now.isoformat(timespec="seconds"),
+            now.date().isoformat(),
+            buy_median,
+            sell_median,
+        ])
 
 
 def aggregate_day(date_str: str):
-    """
-    Devuelve promedios del día usando las muestras intradía.
-    """
+    """Devuelve promedios del día usando las muestras intradía."""
     samples_buy = []
     samples_sell = []
     first_ts = None
@@ -252,10 +326,29 @@ def aggregate_day(date_str: str):
     }
 
 
-def upsert_daily_row(date_str: str, bcv_usd: float, bcv_eur: float, day_agg: dict):
+# ---------------------------------------------------------------------------
+# Historial diario — lógica clave: tasa BCV bloqueada en primera escritura
+# ---------------------------------------------------------------------------
+
+def upsert_daily_row(
+    effective_date: str,
+    bcv_usd: float,
+    bcv_eur: float,
+    day_agg: dict,
+):
     """
-    Mantiene 1 fila por día en rates_history.csv, y la va actualizando
-    para que quede el promedio final del día.
+    Mantiene 1 fila por fecha efectiva BCV en rates_history.csv.
+
+    Regla para bcv_usd / bcv_eur:
+    - Si la fila NO existe → se crea con bcv_locked=1 (primera tasa del día,
+      que es la correcta según la lógica del BCV venezolano).
+    - Si la fila YA existe con bcv_locked=1 → NO se sobreescribe la tasa BCV.
+      Solo se actualizan los promedios Binance del día.
+
+    Esto garantiza que la tasa BCV que queda en el histórico es siempre
+    la primera que se vio para esa fecha efectiva, evitando que la
+    publicación de la tarde (que corresponde al próximo día hábil)
+    contamine el registro.
     """
     ensure_storage()
 
@@ -264,23 +357,48 @@ def upsert_daily_row(date_str: str, bcv_usd: float, bcv_eur: float, day_agg: dic
 
     with open(HISTORY_CSV, "r", newline="", encoding="utf-8") as f:
         r = csv.DictReader(f)
+        fieldnames = r.fieldnames or []
         for row in r:
-            if row["date"] == date_str:
+            if row["date"] == effective_date:
                 found = True
-                row["bcv_usd_ves"] = str(bcv_usd)
-                row["bcv_eur_ves"] = str(bcv_eur)
+                already_locked = row.get("bcv_locked", "0") == "1"
+
+                if not already_locked:
+                    # Primera vez que procesamos este día → grabamos tasa y bloqueamos
+                    row["bcv_usd_ves"] = str(bcv_usd)
+                    row["bcv_eur_ves"] = str(bcv_eur)
+                    row["bcv_locked"] = "1"
+                    logging.info(
+                        f"[BCV] Tasa bloqueada para {effective_date}: "
+                        f"USD={bcv_usd} EUR={bcv_eur}"
+                    )
+                else:
+                    # Tasa ya bloqueada → solo loguear, no tocar
+                    logging.info(
+                        f"[BCV] Tasa ya bloqueada para {effective_date}, "
+                        f"se ignora nuevo valor USD={bcv_usd}"
+                    )
+
+                # Siempre actualizamos los promedios Binance
                 row["usdt_buy_avg"] = str(day_agg["buy_avg"])
                 row["usdt_sell_avg"] = str(day_agg["sell_avg"])
                 row["samples_count"] = str(day_agg["count"])
                 row["first_sample_at"] = day_agg["first_sample_at"]
                 row["last_sample_at"] = day_agg["last_sample_at"]
+
             rows.append(row)
 
     if not found:
+        # Fila nueva: guardamos tasa y la bloqueamos de inmediato
+        logging.info(
+            f"[BCV] Nueva fila para {effective_date}: "
+            f"USD={bcv_usd} EUR={bcv_eur} (bloqueada)"
+        )
         rows.append({
-            "date": date_str,
+            "date": effective_date,
             "bcv_usd_ves": str(bcv_usd),
             "bcv_eur_ves": str(bcv_eur),
+            "bcv_locked": "1",
             "usdt_buy_avg": str(day_agg["buy_avg"]),
             "usdt_sell_avg": str(day_agg["sell_avg"]),
             "samples_count": str(day_agg["count"]),
@@ -288,8 +406,15 @@ def upsert_daily_row(date_str: str, bcv_usd: float, bcv_eur: float, day_agg: dic
             "last_sample_at": day_agg["last_sample_at"],
         })
 
+    # Aseguramos que fieldnames incluya bcv_locked aunque el CSV sea viejo
+    all_keys = list(rows[0].keys())
+    if "bcv_locked" not in all_keys:
+        all_keys.insert(3, "bcv_locked")
+
+    rows = dedupe_and_sort_history(rows)
+
     with open(HISTORY_CSV, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        w = csv.DictWriter(f, fieldnames=all_keys, extrasaction="ignore")
         w.writeheader()
         w.writerows(rows)
 
@@ -302,14 +427,16 @@ def read_history_last_n(n=30):
     with open(HISTORY_CSV, "r", newline="", encoding="utf-8") as f:
         r = csv.DictReader(f)
         for row in r:
-            # normaliza fecha aunque venga con /
-            row["date"] = normalize_date_str(row.get("date"))
+            row["date"] = normalize_date_str(row.get("date", ""))
             out.append(row)
 
     out = dedupe_and_sort_history(out)
     return out[-n:]
 
 
+# ---------------------------------------------------------------------------
+# Utilidades de cálculo
+# ---------------------------------------------------------------------------
 
 def pct_change(today: float, yesterday: float):
     if today is None or yesterday is None or yesterday == 0:
@@ -329,6 +456,10 @@ def normalize_series(values, vmin, vmax):
     return out
 
 
+# ---------------------------------------------------------------------------
+# Construcción de payloads
+# ---------------------------------------------------------------------------
+
 def build_full_payload() -> dict:
     now = dt.datetime.now().astimezone()
 
@@ -338,9 +469,18 @@ def build_full_payload() -> dict:
     buy = fetch_binance_ads_first_100(limit=100, rows=20, trade_type="BUY")
     sell = fetch_binance_ads_first_100(limit=100, rows=20, trade_type="SELL")
 
+    effective_date = bcv_effective_date(now)
+    date_label = bcv_date_label(effective_date, now)
+
     return {
         "updated_at": now.isoformat(timespec="seconds"),
-        "bcv": {"usd_ves": usd["ves"], "eur_ves": eur["ves"], "source": BCV_URL},
+        "bcv": {
+            "usd_ves": usd["ves"],
+            "eur_ves": eur["ves"],
+            "source": BCV_URL,
+            "effective_date": effective_date,   # fecha a la que corresponde la tasa
+            "date_label": date_label,           # 'hoy', 'mañana', 'próx. hábil (...)'
+        },
         "binance": buy,
         "binance_sell": sell,
         "warning": None,
@@ -350,28 +490,31 @@ def build_full_payload() -> dict:
 
 def build_summary_payload(full_payload: dict, history_days=30) -> dict:
     now = dt.datetime.now().astimezone()
-    date_str = now.date().isoformat()
+    today_str = now.date().isoformat()
 
     bcv_usd = full_payload["bcv"]["usd_ves"]
     bcv_eur = full_payload["bcv"]["eur_ves"]
+    effective_date = full_payload["bcv"]["effective_date"]
 
     buy_med = full_payload["binance"]["prices"]["median"]
     sell_med = full_payload["binance_sell"]["prices"]["median"]
 
-    # 1) Guardar muestra intradía (throttle por SAMPLE_INTERVAL_SECONDS)
+    # 1) Guardar muestra intradía Binance (throttle por SAMPLE_INTERVAL_SECONDS)
+    #    Las muestras Binance siguen usando la fecha real, no la efectiva BCV
     record_sample_if_due(now, buy_med, sell_med)
 
-    # 2) Calcular agregado del día (promedio diario)
-    day_agg = aggregate_day(date_str)
+    # 2) Calcular agregado Binance del día real
+    day_agg = aggregate_day(today_str)
 
-    # 3) Actualizar fila diaria (promedio del día “corriendo”)
+    # 3) Actualizar fila del histórico usando la fecha EFECTIVA del BCV
+    #    La tasa BCV se bloquea en la primera escritura para esa fecha
     if day_agg:
-        upsert_daily_row(date_str, bcv_usd, bcv_eur, day_agg)
+        upsert_daily_row(effective_date, bcv_usd, bcv_eur, day_agg)
 
     # 4) Leer histórico diario (últimos N días)
     hist = read_history_last_n(history_days)
 
-    # Cambios vs ayer (usando promedio diario ya guardado)
+    # Cambios vs el día anterior en el histórico
     change = {
         "bcv_usd": {"pct": None},
         "usdt_buy_avg": {"pct": None},
@@ -380,17 +523,20 @@ def build_summary_payload(full_payload: dict, history_days=30) -> dict:
         y = hist[-2]
         t = hist[-1]
         try:
-            change["bcv_usd"]["pct"] = pct_change(float(t["bcv_usd_ves"]), float(y["bcv_usd_ves"]))
+            change["bcv_usd"]["pct"] = pct_change(
+                float(t["bcv_usd_ves"]), float(y["bcv_usd_ves"])
+            )
         except Exception:
             pass
         try:
-            change["usdt_buy_avg"]["pct"] = pct_change(float(t["usdt_buy_avg"]), float(y["usdt_buy_avg"]))
+            change["usdt_buy_avg"]["pct"] = pct_change(
+                float(t["usdt_buy_avg"]), float(y["usdt_buy_avg"])
+            )
         except Exception:
             pass
 
-        # Chart series (usa promedios diarios)
+    # Series para gráficas
     dates = [r["date"] for r in hist]
-
     bcv_series = []
     usdt_series = []
 
@@ -399,13 +545,11 @@ def build_summary_payload(full_payload: dict, history_days=30) -> dict:
             bcv_series.append(float(r["bcv_usd_ves"]))
         except Exception:
             bcv_series.append(None)
-
         try:
             usdt_series.append(float(r["usdt_buy_avg"]))
         except Exception:
             usdt_series.append(None)
 
-    # Eje izquierdo (Bs): escala común BCV + USDT
     all_vals = [v for v in bcv_series + usdt_series if v is not None]
     vmin = min(all_vals) if all_vals else None
     vmax = max(all_vals) if all_vals else None
@@ -423,7 +567,6 @@ def build_summary_payload(full_payload: dict, history_days=30) -> dict:
     brecha_vals = [v for v in brecha_series if v is not None]
     bmin = min(brecha_vals) if brecha_vals else None
     bmax = max(brecha_vals) if brecha_vals else None
-    brecha_norm = normalize_series(brecha_series, bmin, bmax)
 
     chart = {
         "dates": dates,
@@ -431,18 +574,22 @@ def build_summary_payload(full_payload: dict, history_days=30) -> dict:
         "usdt_norm": normalize_series(usdt_series, vmin, vmax),
         "vmin": vmin,
         "vmax": vmax,
-
-        "brecha_norm": brecha_norm,
+        "brecha_norm": normalize_series(brecha_series, bmin, bmax),
         "brecha_min": bmin,
         "brecha_max": bmax,
     }
 
+    # Top 3 anuncios
+    top_buy = [
+        {"price": a["price"], "min": a["min"], "max": a["max"]}
+        for a in full_payload["binance"]["ads"][:3]
+    ]
+    top_sell = [
+        {"price": a["price"], "min": a["min"], "max": a["max"]}
+        for a in full_payload["binance_sell"]["ads"][:3]
+    ]
 
-    # Top anuncios (3)
-    top_buy = [{"price": a["price"], "min": a["min"], "max": a["max"]} for a in full_payload["binance"]["ads"][:3]]
-    top_sell = [{"price": a["price"], "min": a["min"], "max": a["max"]} for a in full_payload["binance_sell"]["ads"][:3]]
-
-    # Brecha ahora (USDT BUY mediana actual vs BCV USD/VES)
+    # Brecha actual (USDT BUY mediana vs BCV USD)
     brecha_now = None
     try:
         now_usdt = full_payload["binance"]["prices"]["median"]
@@ -452,21 +599,21 @@ def build_summary_payload(full_payload: dict, history_days=30) -> dict:
     except Exception:
         pass
 
-    # Brecha promedio del día (si existe day_agg)
+    # Brecha promedio del día
     brecha_day_avg = None
     try:
-        if day_agg and now_bcv not in (None, 0):
-            brecha_day_avg = ((day_agg["buy_avg"] - now_bcv) / now_bcv) * 100.0
+        if day_agg and bcv_usd not in (None, 0):
+            brecha_day_avg = ((day_agg["buy_avg"] - bcv_usd) / bcv_usd) * 100.0
     except Exception:
         pass
 
     return {
         "updated_at": full_payload["updated_at"],
-        "bcv": full_payload["bcv"],
+        "bcv": full_payload["bcv"],   # incluye effective_date y date_label
         "binance_prices": {
-            "buy_now": full_payload["binance"]["prices"],          # instante
-            "sell_now": full_payload["binance_sell"]["prices"],    # instante
-            "day_avg": day_agg,                                    # promedio del día
+            "buy_now": full_payload["binance"]["prices"],
+            "sell_now": full_payload["binance_sell"]["prices"],
+            "day_avg": day_agg,
         },
         "top_ads": {"buy": top_buy, "sell": top_sell},
         "history": hist,
@@ -480,6 +627,10 @@ def build_summary_payload(full_payload: dict, history_days=30) -> dict:
         },
     }
 
+
+# ---------------------------------------------------------------------------
+# Servidor HTTP
+# ---------------------------------------------------------------------------
 
 class Handler(BaseHTTPRequestHandler):
     def _send_json(self, obj, status=200):
@@ -511,7 +662,11 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             CACHE["error"] = f"{type(e).__name__}: {e}"
             if CACHE.get("data"):
-                cached = CACHE["data"]["summary"] if self.path == "/summary.json" else CACHE["data"]["full"]
+                cached = (
+                    CACHE["data"]["summary"]
+                    if self.path == "/summary.json"
+                    else CACHE["data"]["full"]
+                )
                 cached = dict(cached)
                 cached["warning"] = "Mostrando cache por error al actualizar."
                 cached["error"] = CACHE["error"]
@@ -519,13 +674,17 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._send_json({"error": CACHE["error"]}, status=500)
 
+    def log_message(self, format, *args):
+        logging.info(f"[HTTP] {self.address_string()} - {format % args}")
+
 
 def main():
     host = "127.0.0.1"
     port = 8000
     ensure_storage()
-    print(f"Servidor JSON full:    http://{host}:{port}/data.json")
-    print(f"Servidor JSON summary: http://{host}:{port}/summary.json")
+    logging.info(f"Servidor iniciado en http://{host}:{port}")
+    logging.info(f"  Full:    http://{host}:{port}/data.json")
+    logging.info(f"  Summary: http://{host}:{port}/summary.json")
     HTTPServer((host, port), Handler).serve_forever()
 
 
