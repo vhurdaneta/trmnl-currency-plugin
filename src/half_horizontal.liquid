@@ -1,0 +1,32 @@
+{% render "styles" %}
+<div class="wrap">
+
+{% render "header_bar",
+  title: "Tasas",
+  subtitle: "BCV + USDT",
+  updated_at: updated_at
+%}
+
+<div class="hr"></div>
+
+<div class="grid2">
+  <div class="tile">
+    <div class="lab">BCV USD/VES</div>
+    <div class="big">{{ bcv.usd_ves | round: 4 }}</div>
+    <div class="sub">EUR: {{ bcv.eur_ves | round: 4 }}</div>
+    <div class="sub">Cambio: {% render "trend_badge", pct: change.bcv_usd.pct %}</div>
+  </div>
+
+  <div class="tile">
+    <div class="lab">USDT BUY</div>
+    <div class="big">{{ binance_prices.buy_now.median | round: 2 }}</div>
+    {% if binance_prices.day_avg and binance_prices.day_avg.buy_avg %}
+      <div class="sub">Promedio día: {{ binance_prices.day_avg.buy_avg | round: 2 }} ({{ binance_prices.day_avg.count }})</div>
+      <div class="sub">Cambio avg: {% render "trend_badge", pct: change.usdt_buy_avg.pct %}</div>
+    {% else %}
+      <div class="sub">Promedio día: recolectando…</div>
+    {% endif %}
+  </div>
+</div>
+
+</div>

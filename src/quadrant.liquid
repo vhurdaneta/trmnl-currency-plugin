@@ -1,0 +1,29 @@
+{% render "styles" %}
+<div class="wrap">
+
+<div class="hdr">
+  <div>
+    <div class="mid">USDT / VES</div>
+    <div class="muted">BUY mediana</div>
+  </div>
+  <div class="datebox">
+    <div class="date">{{ updated_at | date: "%d/%m" }}</div>
+    <div class="time">{{ updated_at | date: "%H:%M" }}</div>
+  </div>
+</div>
+
+<div class="hr"></div>
+
+<div class="big">{{ binance_prices.buy_now.median | round: 2 }}</div>
+
+{% if binance_prices.day_avg and binance_prices.day_avg.buy_avg %}
+  <div class="sub">Avg día: {{ binance_prices.day_avg.buy_avg | round: 2 }} ({{ binance_prices.day_avg.count }})</div>
+{% else %}
+  <div class="sub">Avg día: recolectando…</div>
+{% endif %}
+
+<div class="hr"></div>
+
+<div class="sub">BCV USD: {{ bcv.usd_ves | round: 4 }} | EUR: {{ bcv.eur_ves | round: 4 }}</div>
+
+</div>

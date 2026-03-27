@@ -1,0 +1,13 @@
+#
+# Changes to this file will be overwritten by `trmnlp pull`.
+#
+# Docs: https://help.usetrmnl.com/en/articles/10542599-importing-and-exporting-private-plugins#h_581fb988f0
+#
+---
+strategy: polling
+refresh_interval: 300
+polling_verb: get
+polling_url: http://host.docker.internal:8000/summary.json
+refresh_interval: 300
+
+#http://host.docker.internal:8000/data.json

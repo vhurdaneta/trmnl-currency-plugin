@@ -1,0 +1,33 @@
+{% render "styles" %}
+<div class="wrap">
+
+{% render "header_bar",
+  title: "USDT",
+  subtitle: "BUY ahora vs promedio del día",
+  updated_at: updated_at
+%}
+
+<div class="hr"></div>
+
+<div class="tile">
+  <div class="lab">USDT BUY ahora (mediana)</div>
+  <div class="big">{{ binance_prices.buy_now.median | round: 2 }}</div>
+
+  {% if binance_prices.day_avg and binance_prices.day_avg.buy_avg %}
+    {% assign diff = binance_prices.buy_now.median | minus: binance_prices.day_avg.buy_avg %}
+    <div class="sub">Promedio del día: {{ binance_prices.day_avg.buy_avg | round: 2 }} (muestras: {{ binance_prices.day_avg.count }})</div>
+    <div class="sub">Diferencia vs promedio: {{ diff | round: 2 }}</div>
+  {% else %}
+    <div class="sub">Promedio del día: recolectando…</div>
+  {% endif %}
+</div>
+
+<div class="hr"></div>
+
+<div class="tile">
+  <div class="lab">BCV USD/VES</div>
+  <div class="mid">{{ bcv.usd_ves | round: 4 }}</div>
+  <div class="sub">Cambio: {% render "trend_badge", pct: change.bcv_usd.pct %}</div>
+</div>
+
+</div>
