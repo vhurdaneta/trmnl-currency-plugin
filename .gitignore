@@ -1,3 +1,2 @@
-*.csv
-rates_history.csv
-binance_samples.csv
+# Solo ignorar muestras intradía, el historial sí se sube
+data/binance_samples.csv
