@@ -461,7 +461,8 @@ def normalize_series(values, vmin, vmax):
 # ---------------------------------------------------------------------------
 
 def build_full_payload() -> dict:
-    now = dt.datetime.now().astimezone()
+    import zoneinfo
+    now = dt.datetime.now(zoneinfo.ZoneInfo("America/Caracas"))
 
     usd = fetch_bcv_rate("dolar")
     eur = fetch_bcv_rate("euro")
@@ -489,7 +490,7 @@ def build_full_payload() -> dict:
 
 
 def build_summary_payload(full_payload: dict, history_days=30) -> dict:
-    now = dt.datetime.now().astimezone()
+    now = dt.datetime.now(zoneinfo.ZoneInfo("America/Caracas"))
     today_str = now.date().isoformat()
 
     bcv_usd = full_payload["bcv"]["usd_ves"]

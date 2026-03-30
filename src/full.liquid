@@ -1,206 +1,175 @@
-{% render "styles" %}
-<div class="wrap">
+<div class="layout layout--col gap--space-between">
 
-{% render "header_bar",
-  title: "BCV x USDT",
-  subtitle: "BCV oficial + Binance P2P (100 anuncios)",
-  updated_at: updated_at
-%}
+  <!-- FILA 1: 4 métricas -->
+  <div class="grid grid--cols-4 gap--medium">
 
-<div class="hr"></div>
-
-<!-- FILA DE MÉTRICAS -->
-<div class="grid4" style="gap:6px;">
-
-  <!-- 1) BCV -->
-  <div class="tile">
-    <div class="lab">BCV USD/VES</div>
-    <div class="val">{{ bcv.usd_ves | round: 4 }}</div>
-    <div class="sub">EUR: {{ bcv.eur_ves | round: 4 }}</div>
-    <div class="sub">Tasa: {{ bcv.date_label }}</div>
-    <div class="sub">Cambio: {% render "trend_badge", pct: change.bcv_usd.pct %}</div>
-  </div>
-
-  <!-- 2) USDT ahora -->
-  <div class="tile">
-    <div class="lab">USDT AHORA</div>
-    <div class="val">{{ binance_prices.buy_now.median | round: 2 }}</div>
-    <div class="sub">SELL: {{ binance_prices.sell_now.median | round: 2 }}</div>
-    <div class="sub">Avg: {{ binance_prices.buy_now.average | round: 2 }}</div>
-    <div class="sub">Rango: {{ binance_prices.buy_now.min | round: 0 }}–{{ binance_prices.buy_now.max | round: 0 }}</div>
-  </div>
-
-  <!-- 3) USDT promedio del día -->
-  <div class="tile">
-    <div class="lab">USDT PROM. DÍA</div>
-    {% if binance_prices.day_avg and binance_prices.day_avg.buy_avg %}
-      <div class="val">{{ binance_prices.day_avg.buy_avg | round: 2 }}</div>
-      <div class="sub">SELL: {{ binance_prices.day_avg.sell_avg | round: 2 }}</div>
-      <div class="sub">Muestras: {{ binance_prices.day_avg.count }}</div>
-      <div class="sub">Cambio: {% render "trend_badge", pct: change.usdt_buy_avg.pct %}</div>
-    {% else %}
-      <div class="val">—</div>
-      <div class="sub">Recolectando...</div>
-    {% endif %}
-  </div>
-
-  <!-- 4) Brecha -->
-  <div class="tile">
-    <div class="lab">BRECHA %</div>
-    <div class="val">
-      {% if brecha.now_pct %}{{ brecha.now_pct | round: 2 }}%{% else %}N/D{% endif %}
+    <div class="col">
+      <div class="description">BCV USD/VES</div>
+      <div class="value value--large value--tnums">{{ bcv.usd_ves | round: 2 }}</div>
+      <div class="description">EUR {{ bcv.eur_ves | round: 2 }}</div>
+      <div class="description">
+        {% if change.bcv_usd.pct %}
+          {% if change.bcv_usd.pct > 0 %}▲{% elsif change.bcv_usd.pct < 0 %}▼{% else %}→{% endif %}
+          {{ change.bcv_usd.pct | abs | round: 2 }}% vs ayer
+        {% else %}— vs ayer{% endif %}
+      </div>
     </div>
-    <div class="sub">USDT vs BCV</div>
-    <div class="sub">Prom. día:
-      {% if brecha.day_avg_pct %}{{ brecha.day_avg_pct | round: 2 }}%{% else %}N/D{% endif %}
+
+    <div class="col">
+      <div class="description">USDT AHORA</div>
+      <div class="value value--large value--tnums">{{ binance_prices.buy_now.median | round: 2 }}</div>
+      <div class="description">SELL {{ binance_prices.sell_now.median | round: 2 }}</div>
+      <div class="description">Mediana 100 anuncios</div>
     </div>
-    <div class="sub">Cambio: {% render "trend_badge", pct: change.bcv_usd.pct %}</div>
+
+    <div class="col">
+      <div class="description">USDT PROM. DÍA</div>
+      {% if binance_prices.day_avg and binance_prices.day_avg.buy_avg %}
+        <div class="value value--large value--tnums">{{ binance_prices.day_avg.buy_avg | round: 2 }}</div>
+        <div class="description">SELL {{ binance_prices.day_avg.sell_avg | round: 2 }}</div>
+        <div class="description">
+          {% if change.usdt_buy_avg.pct %}
+            {% if change.usdt_buy_avg.pct > 0 %}▲{% elsif change.usdt_buy_avg.pct < 0 %}▼{% else %}→{% endif %}
+            {{ change.usdt_buy_avg.pct | abs | round: 2 }}% vs ayer
+          {% else %}{{ binance_prices.day_avg.count }} muestras{% endif %}
+        </div>
+      {% else %}
+        <div class="value value--large">—</div>
+        <div class="description">Recolectando...</div>
+      {% endif %}
+    </div>
+
+    <div class="col">
+      <div class="description">BRECHA %</div>
+      <div class="value value--large value--tnums">
+        {% if brecha.now_pct %}{{ brecha.now_pct | round: 2 }}%{% else %}N/D{% endif %}
+      </div>
+      <div class="description">
+        Prom. día: {% if brecha.day_avg_pct %}{{ brecha.day_avg_pct | round: 2 }}%{% else %}N/D{% endif %}
+      </div>
+      <div class="description">USDT vs BCV</div>
+    </div>
+
   </div>
+
+  <div class="border--b-2 w--full"></div>
+
+  <!-- FILA 2: gráfica -->
+  <script src="https://trmnl.com/js/highcharts/12.3.0/highcharts.js"></script>
+  <div id="bcv-chart" class="w--full"></div>
+  <script type="text/javascript">
+    var bcvData    = [{% for v in chart.bcv_norm %}{% unless forloop.first %},{% endunless %}{{ v | default: 0 }}{% endfor %}];
+    var usdtData   = [{% for v in chart.usdt_norm %}{% unless forloop.first %},{% endunless %}{{ v | default: 0 }}{% endfor %}];
+    var brechaData = [{% for v in chart.brecha_norm %}{% unless forloop.first %},{% endunless %}{{ v | default: 0 }}{% endfor %}];
+    var cats       = [{% for d in chart.dates %}{% unless forloop.first %},{% endunless %}"{{ d | slice: 8, 2 }}/{{ d | slice: 5, 2 }}"{% endfor %}];
+    var vmin = {{ chart.vmin | round: 0 }};
+    var vmax = {{ chart.vmax | round: 0 }};
+
+    Highcharts.chart('bcv-chart', {
+      chart: {
+        type: 'spline',
+        height: 185,
+        animation: false,
+        spacing: [4, 4, 4, 4],
+        backgroundColor: 'transparent'
+      },
+      title: { text: null },
+      credits: { enabled: false },
+      tooltip: { enabled: false },
+      legend: {
+        enabled: true,
+        align: 'right',
+        verticalAlign: 'top',
+        itemStyle: { fontSize: '9px', fontWeight: 'normal', color: '#333' }
+      },
+      plotOptions: {
+        series: {
+          animation: false,
+          enableMouseTracking: false,
+          marker: { enabled: true, radius: 2 }
+        }
+      },
+      xAxis: {
+        categories: cats,
+        labels: { style: { fontSize: '10px' }, step: Math.ceil(cats.length / 6) },
+        tickWidth: 0,
+        lineWidth: 1,
+        gridLineWidth: 1,
+        gridLineDashStyle: 'dot',
+        gridLineColor: '#ddd',
+        title: { text: null }
+      },
+      yAxis: [
+        {
+          title: { text: null },
+          labels: {
+            style: { fontSize: '10px' },
+            formatter: function() {
+              var range = vmax - vmin;
+              return Math.round(vmin + (this.value / 100) * range);
+            }
+          },
+          gridLineWidth: 1,
+          gridLineDashStyle: 'shortdot',
+          gridLineColor: '#ddd',
+          tickAmount: 4,
+          min: 0,
+          max: 100
+        },
+        {
+          title: { text: null },
+          opposite: true,
+          labels: {
+            style: { fontSize: '9px', color: '#999' },
+            formatter: function() {
+              var bmin = {{ chart.brecha_min | round: 1 }};
+              var bmax = {{ chart.brecha_max | round: 1 }};
+              return (bmin + (this.value / 100) * (bmax - bmin)).toFixed(1) + '%';
+            }
+          },
+          gridLineWidth: 0,
+          tickAmount: 4,
+          min: 0,
+          max: 100
+        }
+      ],
+      series: [
+        {
+          name: 'BCV',
+          data: bcvData,
+          yAxis: 0,
+          color: '#000',
+          lineWidth: 2.5,
+          zIndex: 3,
+          marker: { fillColor: '#000', lineColor: '#fff', lineWidth: 1 }
+        },
+        {
+          name: 'USDT',
+          data: usdtData,
+          yAxis: 0,
+          color: '#000',
+          lineWidth: 2,
+          dashStyle: 'LongDash',
+          zIndex: 2,
+          marker: { fillColor: '#fff', lineColor: '#000', lineWidth: 1.5 }
+        },
+        {
+          name: 'Brecha%',
+          data: brechaData,
+          yAxis: 1,
+          color: '#aaa',
+          lineWidth: 1.5,
+          dashStyle: 'ShortDot',
+          zIndex: 1,
+          marker: { fillColor: '#999', lineColor: '#fff', lineWidth: 1, radius: 1.5 }
+        }
+      ]
+    });
+  </script>
 
 </div>
 
-<div class="hr"></div>
-
-<!-- GRÁFICA COMPACTA -->
-<div class="tile">
-  <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:3px;">
-    <div>
-      <div class="lab">TENDENCIA</div>
-      <div class="sub" style="font-size:10px;">BCV (sólida) | USDT prom. día (punteada) | Brecha % (gris)</div>
-    </div>
-    <div class="sub">
-      {{ chart.dates.size }} días &nbsp;|&nbsp; {{ chart.vmin | round: 1 }} – {{ chart.vmax | round: 1 }} Bs
-    </div>
-  </div>
-
-  {% assign outer_w = 760 %}
-  {% assign outer_h = 160 %}
-
-  {% assign pad_l = 54 %}
-  {% assign pad_r = 44 %}
-  {% assign pad_t = 16 %}
-  {% assign pad_b = 28 %}
-
-  {% assign w = outer_w | minus: pad_l | minus: pad_r %}
-  {% assign h = outer_h | minus: pad_t | minus: pad_b %}
-
-  {% assign n     = chart.dates.size %}
-  {% assign denom = n | minus: 1 %}
-
-  {% if denom <= 0 %}
-    <div class="sub" style="padding:8px 0;">Aún no hay suficiente histórico (mín. 2 días).</div>
-  {% else %}
-    {% assign dx   = w | divided_by: denom %}
-    {% assign y0   = pad_t | plus: h %}
-    {% assign xmax = pad_l | plus: w %}
-
-    {% assign y_pad    = 20 %}
-    {% assign vmin_vis = chart.vmin | minus: y_pad %}
-    {% assign vmax_vis = chart.vmax | plus:  y_pad %}
-    {% assign vrange   = vmax_vis   | minus: vmin_vis %}
-
-    {% assign vmid_bs = vmin_vis | plus: vrange | divided_by: 2 %}
-    {% assign v25_bs  = vmin_vis | plus: vrange | times: 25 | divided_by: 100 %}
-    {% assign v75_bs  = vmin_vis | plus: vrange | times: 75 | divided_by: 100 %}
-
-    {% assign orig_range = chart.vmax | minus: chart.vmin %}
-    {% assign base_shift = chart.vmin | minus: vmin_vis | times: 100 | divided_by: vrange %}
-    {% assign scale_pct  = orig_range | times: 100 | divided_by: vrange %}
-
-    {% assign bp_pad    = 1 %}
-    {% assign bmin_vis  = chart.brecha_min | minus: bp_pad %}
-    {% assign bmax_vis  = chart.brecha_max | plus:  bp_pad %}
-    {% assign brange    = bmax_vis | minus: bmin_vis %}
-
-    {% assign bmid      = bmin_vis | plus: brange | divided_by: 2 %}
-    {% assign b25       = bmin_vis | plus: brange | times: 25 | divided_by: 100 %}
-    {% assign b75       = bmin_vis | plus: brange | times: 75 | divided_by: 100 %}
-
-    {% assign borig_range = chart.brecha_max | minus: chart.brecha_min %}
-    {% assign bbase_shift = chart.brecha_min | minus: bmin_vis | times: 100 | divided_by: brange %}
-    {% assign bscale_pct  = borig_range | times: 100 | divided_by: brange %}
-
-    {% assign y25g = pad_t | plus: (h | times: 25 | divided_by: 100) %}
-    {% assign y50g = pad_t | plus: (h | times: 50 | divided_by: 100) %}
-    {% assign y75g = pad_t | plus: (h | times: 75 | divided_by: 100) %}
-
-    {% capture pts_bcv %}{% for p in chart.bcv_norm %}{% if p != nil %}{% assign x = forloop.index0 | times: dx | plus: pad_l %}{% assign p_new = p | times: scale_pct | divided_by: 100 | plus: base_shift %}{% assign inv = 100 | minus: p_new %}{% assign yrel = inv | times: h | divided_by: 100 %}{% assign y = yrel | plus: pad_t %}{{ x }},{{ y }} {% endif %}{% endfor %}{% endcapture %}
-
-    {% capture markers_bcv %}{% for p in chart.bcv_norm %}{% if p != nil %}{% assign x = forloop.index0 | times: dx | plus: pad_l %}{% assign p_new = p | times: scale_pct | divided_by: 100 | plus: base_shift %}{% assign inv = 100 | minus: p_new %}{% assign yrel = inv | times: h | divided_by: 100 %}{% assign y = yrel | plus: pad_t %}<circle cx="{{ x }}" cy="{{ y }}" r="2.5" fill="black" stroke="white" stroke-width="1"/>{% endif %}{% endfor %}{% endcapture %}
-
-    {% capture pts_usdt %}{% for p in chart.usdt_norm %}{% if p != nil %}{% assign x = forloop.index0 | times: dx | plus: pad_l %}{% assign p_new = p | times: scale_pct | divided_by: 100 | plus: base_shift %}{% assign inv = 100 | minus: p_new %}{% assign yrel = inv | times: h | divided_by: 100 %}{% assign y = yrel | plus: pad_t %}{{ x }},{{ y }} {% endif %}{% endfor %}{% endcapture %}
-
-    {% capture markers_usdt %}{% for p in chart.usdt_norm %}{% if p != nil %}{% assign x = forloop.index0 | times: dx | plus: pad_l %}{% assign p_new = p | times: scale_pct | divided_by: 100 | plus: base_shift %}{% assign inv = 100 | minus: p_new %}{% assign yrel = inv | times: h | divided_by: 100 %}{% assign y = yrel | plus: pad_t %}<circle cx="{{ x }}" cy="{{ y }}" r="2.5" fill="white" stroke="black" stroke-width="1.5"/>{% endif %}{% endfor %}{% endcapture %}
-
-    {% capture pts_brecha %}{% for p in chart.brecha_norm %}{% if p != nil %}{% assign x = forloop.index0 | times: dx | plus: pad_l %}{% assign p_new = p | times: bscale_pct | divided_by: 100 | plus: bbase_shift %}{% assign inv = 100 | minus: p_new %}{% assign yrel = inv | times: h | divided_by: 100 %}{% assign y = yrel | plus: pad_t %}{{ x }},{{ y }} {% endif %}{% endfor %}{% endcapture %}
-
-    {% capture markers_brecha %}{% for p in chart.brecha_norm %}{% if p != nil %}{% assign x = forloop.index0 | times: dx | plus: pad_l %}{% assign p_new = p | times: bscale_pct | divided_by: 100 | plus: bbase_shift %}{% assign inv = 100 | minus: p_new %}{% assign yrel = inv | times: h | divided_by: 100 %}{% assign y = yrel | plus: pad_t %}<circle cx="{{ x }}" cy="{{ y }}" r="2" fill="#888" stroke="white" stroke-width="1"/>{% endif %}{% endfor %}{% endcapture %}
-
-    {% assign mid_i = denom | divided_by: 2 %}
-    {% assign mid_x = mid_i | times: dx | plus: pad_l %}
-
-    {% assign fd = chart.dates.first  | split: "-" %}
-    {% assign ld = chart.dates.last   | split: "-" %}
-    {% assign md = chart.dates[mid_i] | split: "-" %}
-
-    {% assign first_label = fd[2] | append: "-" | append: fd[1] %}
-    {% assign last_label  = ld[2] | append: "-" | append: ld[1] %}
-    {% assign mid_label   = md[2] | append: "-" | append: md[1] %}
-
-    {% assign yr_x = xmax | plus: 4 %}
-
-    <svg width="100%" viewBox="0 0 {{ outer_w }} {{ outer_h }}" xmlns="http://www.w3.org/2000/svg" style="display:block;">
-
-      <rect x="0" y="0" width="{{ outer_w }}" height="{{ outer_h }}" fill="white" stroke="black" stroke-width="1"/>
-      <rect x="{{ pad_l }}" y="{{ pad_t }}" width="{{ w }}" height="{{ h }}" fill="#f9f9f9" stroke="none"/>
-
-      <line x1="{{ pad_l }}" y1="{{ y25g }}" x2="{{ xmax }}" y2="{{ y25g }}" stroke="#ccc" stroke-width="1" stroke-dasharray="2 5"/>
-      <line x1="{{ pad_l }}" y1="{{ y50g }}" x2="{{ xmax }}" y2="{{ y50g }}" stroke="#ccc" stroke-width="1" stroke-dasharray="2 5"/>
-      <line x1="{{ pad_l }}" y1="{{ y75g }}" x2="{{ xmax }}" y2="{{ y75g }}" stroke="#ccc" stroke-width="1" stroke-dasharray="2 5"/>
-
-      <line x1="{{ pad_l }}" y1="{{ pad_t }}" x2="{{ pad_l }}" y2="{{ y0 }}" stroke="black" stroke-width="1"/>
-      <line x1="{{ xmax }}" y1="{{ pad_t }}" x2="{{ xmax }}" y2="{{ y0 }}" stroke="#888" stroke-width="1"/>
-      <line x1="{{ pad_l }}" y1="{{ y0 }}" x2="{{ xmax }}" y2="{{ y0 }}" stroke="black" stroke-width="2"/>
-
-      <text x="{{ pad_l | minus: 4 }}" y="{{ pad_t | plus: 4 }}" font-size="10" text-anchor="end" dominant-baseline="hanging">{{ vmax_vis | round: 0 }}</text>
-      <text x="{{ pad_l | minus: 4 }}" y="{{ y50g }}"             font-size="10" text-anchor="end" dominant-baseline="middle">{{ vmid_bs | round: 0 }}</text>
-      <text x="{{ pad_l | minus: 4 }}" y="{{ y0 }}"               font-size="10" text-anchor="end" dominant-baseline="auto">{{ vmin_vis | round: 0 }}</text>
-
-      <text x="{{ yr_x | plus: 2 }}" y="{{ pad_t | plus: 4 }}" font-size="9" text-anchor="start" dominant-baseline="hanging" fill="#666">{{ bmax_vis | round: 1 }}%</text>
-      <text x="{{ yr_x | plus: 2 }}" y="{{ y50g }}"             font-size="9" text-anchor="start" dominant-baseline="middle"  fill="#666">{{ bmid | round: 1 }}%</text>
-      <text x="{{ yr_x | plus: 2 }}" y="{{ y0 }}"               font-size="9" text-anchor="start" dominant-baseline="auto"    fill="#666">{{ bmin_vis | round: 1 }}%</text>
-
-      <polyline points="{{ pts_brecha | strip }}" fill="none" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4 3" stroke-linejoin="round" stroke-linecap="round"/>
-      {{ markers_brecha }}
-
-      <polyline points="{{ pts_bcv | strip }}" fill="none" stroke="black" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-      {{ markers_bcv }}
-
-      <polyline points="{{ pts_usdt | strip }}" fill="none" stroke="black" stroke-width="2" stroke-dasharray="10 5" stroke-linejoin="round" stroke-linecap="round"/>
-      {{ markers_usdt }}
-
-      <text x="{{ pad_l }}"  y="{{ y0 | plus: 12 }}" font-size="10" text-anchor="start">{{ first_label }}</text>
-      <text x="{{ mid_x }}"  y="{{ y0 | plus: 12 }}" font-size="10" text-anchor="middle">{{ mid_label }}</text>
-      <text x="{{ xmax }}"   y="{{ y0 | plus: 12 }}" font-size="10" text-anchor="end">{{ last_label }}</text>
-
-      <!-- LEYENDA compacta -->
-      {% assign leg_y = pad_t | plus: 10 %}
-      <line x1="{{ pad_l | plus: 8 }}"   y1="{{ leg_y }}" x2="{{ pad_l | plus: 22 }}"  y2="{{ leg_y }}" stroke="black" stroke-width="2.5"/>
-      <text x="{{ pad_l | plus: 25 }}" y="{{ leg_y }}" font-size="10" dominant-baseline="middle">BCV</text>
-      <line x1="{{ pad_l | plus: 55 }}"  y1="{{ leg_y }}" x2="{{ pad_l | plus: 69 }}"  y2="{{ leg_y }}" stroke="black" stroke-width="2" stroke-dasharray="6 3"/>
-      <text x="{{ pad_l | plus: 72 }}" y="{{ leg_y }}" font-size="10" dominant-baseline="middle">USDT</text>
-      <line x1="{{ pad_l | plus: 102 }}" y1="{{ leg_y }}" x2="{{ pad_l | plus: 116 }}" y2="{{ leg_y }}" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4 3"/>
-      <text x="{{ pad_l | plus: 119 }}" y="{{ leg_y }}" font-size="10" dominant-baseline="middle" fill="#666">Brecha %</text>
-
-    </svg>
-  {% endif %}
-</div>
-
-<div class="hr"></div>
-
-<div class="foot">
-  <div>BCV + Binance P2P</div>
-  <div>{{ updated_at | date: "%d/%m/%Y %H:%M" }}</div>
-</div>
-
+<div class="title_bar">
+  <span class="title">BCV x USDT</span>
+  <span class="instance">{{ updated_at | date: "%d/%m %H:%M" }}</span>
 </div>
