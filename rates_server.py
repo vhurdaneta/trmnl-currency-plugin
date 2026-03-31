@@ -468,7 +468,7 @@ def build_summary_payload(full_payload: dict, history_days=30) -> dict:
     vmax_raw = max(all_vals) if all_vals else None
 
     # Padding 3% en cada extremo para que las líneas respiren
-    AXIS_PAD = 0.03
+    AXIS_PAD = 0.05
     if vmin_raw is not None and vmax_raw is not None:
         vrange   = vmax_raw - vmin_raw
         vmin     = vmin_raw - vrange * AXIS_PAD
