@@ -464,9 +464,17 @@ def build_summary_payload(full_payload: dict, history_days=30) -> dict:
             usdt_series.append(None)
 
     all_vals = [v for v in bcv_series + usdt_series if v is not None]
-    vmin = min(all_vals) if all_vals else None
-    vmax = max(all_vals) if all_vals else None
+    vmin_raw = min(all_vals) if all_vals else None
+    vmax_raw = max(all_vals) if all_vals else None
 
+    # Padding 3% en cada extremo para que las líneas respiren
+    AXIS_PAD = 0.03
+    if vmin_raw is not None and vmax_raw is not None:
+        vrange   = vmax_raw - vmin_raw
+        vmin     = vmin_raw - vrange * AXIS_PAD
+        vmax     = vmax_raw + vrange * AXIS_PAD
+    else:
+        vmin = vmax = None
     brecha_series = []
     for b, u in zip(bcv_series, usdt_series):
         if b is None or u is None or b == 0:
@@ -475,8 +483,16 @@ def build_summary_payload(full_payload: dict, history_days=30) -> dict:
             brecha_series.append(((u - b) / b) * 100.0)
 
     brecha_vals = [v for v in brecha_series if v is not None]
-    bmin = min(brecha_vals) if brecha_vals else None
-    bmax = max(brecha_vals) if brecha_vals else None
+    bmin_raw = min(brecha_vals) if brecha_vals else None
+    bmax_raw = max(brecha_vals) if brecha_vals else None
+
+    # Padding 3% en brecha también
+    if bmin_raw is not None and bmax_raw is not None:
+        brange = bmax_raw - bmin_raw
+        bmin   = bmin_raw - brange * AXIS_PAD
+        bmax   = bmax_raw + brange * AXIS_PAD
+    else:
+        bmin = bmax = None
 
     chart = {
         "dates":       dates,
@@ -523,6 +539,7 @@ def build_summary_payload(full_payload: dict, history_days=30) -> dict:
         "error":    full_payload.get("error"),
         "brecha":   {"now_pct": brecha_now, "day_avg_pct": brecha_day_avg},
     }
+
 
 
 # ---------------------------------------------------------------------------
