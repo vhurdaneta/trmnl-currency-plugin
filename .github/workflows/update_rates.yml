@@ -2,16 +2,15 @@ name: Actualizar tasas BCV + Binance
 
 on:
   schedule:
-    # Cada 15 minutos (GitHub Actions tiene un mínimo de 5 min)
-    - cron: "*/15 * * * *"
-  workflow_dispatch: # permite correrlo manualmente desde GitHub
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
 
 jobs:
   fetch-rates:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write # necesario para hacer commit del JSON
+      contents: write
 
     steps:
       - name: Checkout repositorio
@@ -32,6 +31,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/output.json data/rates_history.csv
+          git add data/output.json data/rates_history.csv data/binance_samples.csv
           git diff --cached --quiet || git commit -m "chore: actualizar tasas $(date -u '+%Y-%m-%d %H:%M') UTC"
           git push
