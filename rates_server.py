@@ -382,11 +382,45 @@ def normalize_series(values, vmin, vmax):
 # Payloads
 # ---------------------------------------------------------------------------
 
+def get_locked_bcv_today() -> dict | None:
+    """
+    Lee el CSV y retorna la tasa BCV bloqueada para hoy (fecha Venezuela).
+    Si no existe o no está bloqueada, retorna None.
+    """
+    today = now_vet().date().isoformat()
+    if not os.path.exists(HISTORY_CSV):
+        return None
+    with open(HISTORY_CSV, "r", newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            date = normalize_date_str(row.get("date", ""))
+            if date == today and row.get("bcv_locked") == "1":
+                try:
+                    return {
+                        "ves": float(row["bcv_usd_ves"]),
+                        "eur": float(row["bcv_eur_ves"]),
+                    }
+                except Exception:
+                    return None
+    return None
+
+
 def build_full_payload() -> dict:
     now = now_vet()
 
-    usd = fetch_bcv_rate("dolar")
-    eur = fetch_bcv_rate("euro")
+    # Si ya tenemos tasa BCV bloqueada para hoy, la usamos sin consultar el BCV
+    bcv_cached = get_locked_bcv_today()
+    if bcv_cached:
+        usd_ves = bcv_cached["ves"]
+        eur_ves = bcv_cached["eur"]
+        logging.info(f"[BCV] Usando tasa bloqueada del CSV: USD={usd_ves}")
+    else:
+        # No hay tasa bloqueada aún — consultamos el BCV
+        logging.info("[BCV] No hay tasa bloqueada, consultando BCV...")
+        usd_data = fetch_bcv_rate("dolar")
+        eur_data = fetch_bcv_rate("euro")
+        usd_ves  = usd_data["ves"]
+        eur_ves  = eur_data["ves"]
+
     buy  = fetch_binance_ads_first_100(limit=100, rows=20, trade_type="BUY")
     sell = fetch_binance_ads_first_100(limit=100, rows=20, trade_type="SELL")
 
@@ -396,8 +430,8 @@ def build_full_payload() -> dict:
     return {
         "updated_at": now.isoformat(timespec="seconds"),
         "bcv": {
-            "usd_ves":        usd["ves"],
-            "eur_ves":        eur["ves"],
+            "usd_ves":        usd_ves,
+            "eur_ves":        eur_ves,
             "source":         BCV_URL,
             "effective_date": effective_date,
             "date_label":     date_label,
@@ -407,7 +441,6 @@ def build_full_payload() -> dict:
         "warning": None,
         "error":   None,
     }
-
 
 def build_summary_payload(full_payload: dict, history_days=30) -> dict:
     now      = now_vet()
