@@ -1,55 +1,55 @@
 {
-  "updated_at": "2026-04-01T21:22:36-04:00",
+  "updated_at": "2026-04-02T00:02:05-04:00",
   "bcv": {
     "usd_ves": 473.9176,
     "eur_ves": 545.94833602,
     "source": "https://www.bcv.org.ve",
     "effective_date": "2026-04-02",
-    "date_label": "mañana"
+    "date_label": "hoy"
   },
   "binance_prices": {
     "buy_now": {
       "count": 100,
-      "median": 655.8,
-      "average": 655.58306,
-      "min": 654.0,
-      "max": 656.4
+      "median": 656.295,
+      "average": 656.3199,
+      "min": 654.5,
+      "max": 657.499
     },
     "sell_now": {
       "count": 100,
-      "median": 653.306,
-      "average": 654.31195,
-      "min": 651.85,
+      "median": 650.0,
+      "average": 651.12518,
+      "min": 648.0,
       "max": 700.0
     },
     "day_avg": {
-      "count": 22,
-      "buy_avg": 655.1742954545455,
-      "sell_avg": 650.73525,
-      "buy_min": 648.945,
-      "buy_max": 659.999,
-      "sell_min": 646.1055,
-      "sell_max": 654.0,
-      "first_sample_at": "2026-04-01T00:20:07-04:00",
-      "last_sample_at": "2026-04-01T21:22:39-04:00"
+      "count": 1,
+      "buy_avg": 656.295,
+      "sell_avg": 650.0,
+      "buy_min": 656.295,
+      "buy_max": 656.295,
+      "sell_min": 650.0,
+      "sell_max": 650.0,
+      "first_sample_at": "2026-04-02T00:02:08-04:00",
+      "last_sample_at": "2026-04-02T00:02:08-04:00"
     }
   },
   "top_ads": {
     "buy": [
       {
-        "price": 654.0,
-        "min": 3000.0,
-        "max": 15000.0
-      },
-      {
-        "price": 654.499,
-        "min": 80000.0,
-        "max": 4000000.0
-      },
-      {
         "price": 654.5,
-        "min": 60000.0,
-        "max": 229075.0
+        "min": 3000.0,
+        "max": 10000.0
+      },
+      {
+        "price": 654.89,
+        "min": 38999.0,
+        "max": 39000.0
+      },
+      {
+        "price": 654.93,
+        "min": 50000.0,
+        "max": 4000000.0
       }
     ],
     "sell": [
@@ -64,9 +64,9 @@
         "max": 3000.0
       },
       {
-        "price": 658.0,
-        "min": 7000000.0,
-        "max": 300000000.0
+        "price": 655.5,
+        "min": 3300000.0,
+        "max": 500000000.0
       }
     ]
   },
@@ -164,11 +164,11 @@
       "bcv_usd_ves": "473.9176",
       "bcv_eur_ves": "545.94833602",
       "bcv_locked": "1",
-      "usdt_buy_avg": "655.1742954545455",
-      "usdt_sell_avg": "650.73525",
-      "samples_count": "22",
-      "first_sample_at": "2026-04-01T00:20:07-04:00",
-      "last_sample_at": "2026-04-01T21:22:39-04:00"
+      "usdt_buy_avg": "656.295",
+      "usdt_sell_avg": "650.0",
+      "samples_count": "1",
+      "first_sample_at": "2026-04-02T00:02:08-04:00",
+      "last_sample_at": "2026-04-02T00:02:08-04:00"
     }
   ],
   "change": {
@@ -176,7 +176,7 @@
       "pct": 0.0
     },
     "usdt_buy_avg": {
-      "pct": 0.03473781550789385
+      "pct": 0.20585164911061252
     }
   },
   "chart": {
@@ -224,7 +224,7 @@
       35,
       22,
       5,
-      6
+      10
     ],
     "brecha_min": 37.97307136535324,
     "brecha_max": 42.93141884151259
@@ -232,7 +232,7 @@
   "warning": null,
   "error": null,
   "brecha": {
-    "now_pct": 38.37848604905156,
-    "day_avg_pct": 38.24645791896006
+    "now_pct": 38.48293458609682,
+    "day_avg_pct": 38.48293458609682
   }
 }
