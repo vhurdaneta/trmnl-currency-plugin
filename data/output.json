@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-04-03T03:47:19-04:00",
+  "updated_at": "2026-04-03T04:34:42-04:00",
   "bcv": {
     "usd_ves": 473.9176,
     "eur_ves": 545.94833602,
@@ -10,28 +10,28 @@
   "binance_prices": {
     "buy_now": {
       "count": 100,
-      "median": 653.6,
-      "average": 653.62004,
+      "median": 653.55,
+      "average": 653.53286,
       "min": 649.2,
-      "max": 655.4
+      "max": 655.2
     },
     "sell_now": {
       "count": 100,
-      "median": 642.2629999999999,
-      "average": 642.81698,
-      "min": 639.0,
+      "median": 641.85,
+      "average": 642.40408,
+      "min": 637.5,
       "max": 649.5
     },
     "day_avg": {
-      "count": 3,
-      "buy_avg": 653.4,
-      "sell_avg": 643.3043333333334,
+      "count": 4,
+      "buy_avg": 653.4375,
+      "sell_avg": 642.94075,
       "buy_min": 653.0,
       "buy_max": 653.6,
-      "sell_min": 642.2629999999999,
+      "sell_min": 641.85,
       "sell_max": 644.5,
       "first_sample_at": "2026-04-03T01:26:22-04:00",
-      "last_sample_at": "2026-04-03T03:47:21-04:00"
+      "last_sample_at": "2026-04-03T04:34:45-04:00"
     }
   },
   "top_ads": {
@@ -175,11 +175,11 @@
       "bcv_usd_ves": "473.9176",
       "bcv_eur_ves": "545.94833602",
       "bcv_locked": "1",
-      "usdt_buy_avg": "653.4",
-      "usdt_sell_avg": "643.3043333333334",
-      "samples_count": "3",
+      "usdt_buy_avg": "653.4375",
+      "usdt_sell_avg": "642.94075",
+      "samples_count": "4",
       "first_sample_at": "2026-04-03T01:26:22-04:00",
-      "last_sample_at": "2026-04-03T03:47:21-04:00"
+      "last_sample_at": "2026-04-03T04:34:45-04:00"
     }
   ],
   "change": {
@@ -187,7 +187,7 @@
       "pct": 0.0
     },
     "usdt_buy_avg": {
-      "pct": -0.2992877848444161
+      "pct": -0.29356575131507634
     }
   },
   "chart": {
@@ -241,13 +241,13 @@
       12,
       5
     ],
-    "brecha_min": 37.630370374189376,
-    "brecha_max": 42.947737936329915
+    "brecha_min": 37.638678780545256,
+    "brecha_max": 42.94734229793202
   },
   "warning": null,
   "error": null,
   "brecha": {
-    "now_pct": 37.91427032885043,
-    "day_avg_pct": 37.872068899741215
+    "now_pct": 37.90371997157311,
+    "day_avg_pct": 37.8799816676992
   }
 }
