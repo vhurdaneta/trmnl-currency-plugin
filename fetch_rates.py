@@ -48,7 +48,7 @@ def main():
             json.dump(summary_payload, f, ensure_ascii=False, indent=2)
 
         logging.info(f"BCV USD/VES : {summary_payload['bcv']['usd_ves']}")
-        logging.info(f"BCV efectivo: {summary_payload['bcv']['effective_date']} ({summary_payload['bcv']['date_label']})")
+        logging.info(f"BCV USD/VES guardado: {summary_payload['bcv']['usd_ves']}")
         logging.info(f"Binance BUY : {summary_payload['binance_prices']['buy_now']['median']}")
         logging.info(f"Binance SELL: {summary_payload['binance_prices']['sell_now']['median']}")
         logging.info(f"Brecha ahora: {summary_payload['brecha']['now_pct']:.2f}%")
