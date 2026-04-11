@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-04-11T03:58:28-04:00",
+  "updated_at": "2026-04-11T04:41:23-04:00",
   "bcv": {
     "usd_ves": 477.1488,
     "eur_ves": 560.04863251,
@@ -9,27 +9,27 @@
     "buy_now": {
       "count": 100,
       "median": 640.0,
-      "average": 640.20354,
+      "average": 640.04916,
       "min": 636.5,
-      "max": 642.0
+      "max": 641.998
     },
     "sell_now": {
       "count": 100,
-      "median": 628.975,
-      "average": 629.28405,
+      "median": 629.0,
+      "average": 629.33604,
       "min": 625.0,
       "max": 637.5
     },
     "day_avg": {
-      "count": 4,
-      "buy_avg": 639.985,
-      "sell_avg": 630.36,
+      "count": 5,
+      "buy_avg": 639.988,
+      "sell_avg": 630.088,
       "buy_min": 639.94,
       "buy_max": 640.0,
       "sell_min": 628.975,
       "sell_max": 632.505,
       "first_sample_at": "2026-04-11T01:14:55-04:00",
-      "last_sample_at": "2026-04-11T03:58:29-04:00"
+      "last_sample_at": "2026-04-11T04:41:25-04:00"
     }
   },
   "top_ads": {
@@ -58,7 +58,7 @@
       },
       {
         "price": 637.5,
-        "min": 500000.0,
+        "min": 700000.0,
         "max": 14000000.0
       },
       {
@@ -223,11 +223,11 @@
       "date": "2026-04-11",
       "bcv_usd_ves": "477.1488",
       "bcv_eur_ves": "560.04863251",
-      "usdt_buy_avg": "639.985",
-      "usdt_sell_avg": "630.36",
-      "samples_count": "4",
+      "usdt_buy_avg": "639.988",
+      "usdt_sell_avg": "630.088",
+      "samples_count": "5",
       "first_sample_at": "2026-04-11T01:14:55-04:00",
-      "last_sample_at": "2026-04-11T03:58:29-04:00"
+      "last_sample_at": "2026-04-11T04:41:25-04:00"
     }
   ],
   "change": {
@@ -235,7 +235,7 @@
       "pct": 0.25012695439915344
     },
     "usdt_buy_avg": {
-      "pct": 0.3521653006158378
+      "pct": 0.35263571241596775
     }
   },
   "chart": {
@@ -320,6 +320,6 @@
   "error": null,
   "brecha": {
     "now_pct": 34.13006592492741,
-    "day_avg_pct": 34.12692225150729
+    "day_avg_pct": 34.12755098619132
   }
 }
