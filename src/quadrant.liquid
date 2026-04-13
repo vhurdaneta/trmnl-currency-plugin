@@ -1,29 +1,49 @@
-{% render "styles" %}
-<div class="wrap">
+<div class="layout layout--col gap--space-between">
 
-<div class="hdr">
-  <div>
-    <div class="mid">USDT / VES</div>
-    <div class="muted">BUY mediana</div>
+  <div class="item">
+    <div class="content">
+      <span class="value value--medium value--tnums">{{ bcv.usd_ves | round: 2 }}</span>
+      <span class="label">BCV USD/VES</span>
+    </div>
   </div>
-  <div class="datebox">
-    <div class="date">{{ updated_at | date: "%d/%m" }}</div>
-    <div class="time">{{ updated_at | date: "%H:%M" }}</div>
+
+  <div class="divider"></div>
+
+  <div class="item">
+    <div class="content">
+      <span class="value value--medium value--tnums">{{ binance_prices.buy_now.median | round: 2 }}</span>
+      <span class="label">USDT P2P</span>
+    </div>
   </div>
+
+  <div class="divider"></div>
+
+  <div class="flex flex--row gap--large">
+    <div class="item">
+      <div class="content">
+        <span class="value value--small value--tnums">
+          {% if brecha.now_pct %}{{ brecha.now_pct | round: 2 }}%{% else %}N/D{% endif %}
+        </span>
+        <span class="label">Brecha</span>
+      </div>
+    </div>
+    <div class="item">
+      <div class="content">
+        <span class="value value--small value--tnums">
+          {% if change.bcv_usd.pct %}
+            {% if change.bcv_usd.pct > 0 %}▲ {{ change.bcv_usd.pct | abs | round: 2 }}%
+            {% elsif change.bcv_usd.pct < 0 %}▼ {{ change.bcv_usd.pct | abs | round: 2 }}%
+            {% else %}→ 0.00%{% endif %}
+          {% else %}—{% endif %}
+        </span>
+        <span class="label">Var. BCV</span>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<div class="hr"></div>
-
-<div class="big">{{ binance_prices.buy_now.median | round: 2 }}</div>
-
-{% if binance_prices.day_avg and binance_prices.day_avg.buy_avg %}
-  <div class="sub">Avg día: {{ binance_prices.day_avg.buy_avg | round: 2 }} ({{ binance_prices.day_avg.count }})</div>
-{% else %}
-  <div class="sub">Avg día: recolectando…</div>
-{% endif %}
-
-<div class="hr"></div>
-
-<div class="sub">BCV USD: {{ bcv.usd_ves | round: 4 }} | EUR: {{ bcv.eur_ves | round: 4 }}</div>
-
+<div class="title_bar">
+  <span class="title">BCV x USDT</span>
+  <span class="instance">{{ updated_at | date: "%d/%m %H:%M" }}</span>
 </div>
