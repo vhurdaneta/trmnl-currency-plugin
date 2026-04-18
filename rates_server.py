@@ -23,8 +23,8 @@ SAMPLE_INTERVAL_SECONDS = 300  # 5 minutos
 
 # Ventana horaria para consultar el BCV (hora Venezuela)
 # A las 6-7AM el BCV ya tiene publicada la tasa correcta del día
-BCV_FETCH_HOUR_START = 6
-BCV_FETCH_HOUR_END   = 19  # hasta las 7PM seguimos actualizando si no hay dato del día
+BCV_FETCH_HOUR_START = 4
+BCV_FETCH_HOUR_END   = 6  # hasta las 7PM seguimos actualizando si no hay dato del día
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
