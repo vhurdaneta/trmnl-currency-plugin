@@ -68,7 +68,7 @@ GitHub Actions (cada ~5 min)
 
 ## ⚙️ Lógica del BCV
 
-El BCV venezolano tiene un comportamiento particular:
+La publicación de la tasa del dólar según el Banco Central de Venezuela tiene un comportamiento particular:
 
 - Publica la tasa del **día hábil siguiente** alrededor de las **5–6 PM** del día anterior
 - Para evitar que la tasa "de mañana" contamine el registro de hoy, **el script solo consulta el BCV entre las 3AM y 8AM VET**
