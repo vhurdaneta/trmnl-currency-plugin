@@ -45,36 +45,26 @@ def now_vet() -> dt.datetime:
 
 def _to_float_ves(s: str) -> float:
     import re
-    # Eliminar cualquier texto que no sea número, punto, coma o signo negativo
+    # Eliminar letras, espacios y caracteres especiales (USD, Bs, etc.)
     s = re.sub(r'[^\d.,-]', '', s).strip()
-    # Detectar si usan coma como decimal (ej: "500,4606") o como separador de miles
-    if ',' in s and '.' in s:
-        # Tienen ambos: el último es el decimal
+    # Si tiene coma pero no punto → la coma es el decimal (500,4606)
+    if ',' in s and '.' not in s:
+        s = s.replace(',', '.')
+    # Si tiene punto pero no coma → verificar si es decimal o miles
+    elif '.' in s and ',' not in s:
+        parts = s.split('.')
+        # Si hay más de un punto, son separadores de miles → eliminarlos excepto el último
+        if len(parts) > 2:
+            s = ''.join(parts[:-1]) + '.' + parts[-1]
+        # Si solo hay un punto y más de 4 decimales → es decimal normal, dejarlo
+    # Si tiene ambos → el que está de último es el decimal
+    elif ',' in s and '.' in s:
         if s.rfind(',') > s.rfind('.'):
-            # Coma es decimal: "1.500,46" → quitar puntos, cambiar coma por punto
             s = s.replace('.', '').replace(',', '.')
         else:
-            # Punto es decimal: "1,500.46" → quitar comas
             s = s.replace(',', '')
-    elif ',' in s:
-        # Solo coma: puede ser decimal "500,46" o miles "1,500"
-        parts = s.split(',')
-        if len(parts) == 2 and len(parts[1]) <= 4:
-            # Es decimal
-            s = s.replace(',', '.')
-        else:
-            # Es separador de miles
-            s = s.replace(',', '')
-    elif '.' in s:
-        # Solo punto: puede ser decimal "500.46" o miles "1.500"
-        parts = s.split('.')
-        if len(parts) == 2 and len(parts[1]) <= 4:
-            # Es decimal
-            pass  # ya está bien
-        else:
-            # Es separador de miles
-            s = s.replace('.', '')
     return float(s)
+
  
 
 
